@@ -2,16 +2,16 @@ package br.com.alura.forum_hub.controller;
 
 import br.com.alura.forum_hub.domain.curso.Curso;
 import br.com.alura.forum_hub.domain.curso.CursoRepository;
-import br.com.alura.forum_hub.domain.topico.DadosCadastroTopico;
-import br.com.alura.forum_hub.domain.topico.Topico;
-import br.com.alura.forum_hub.domain.topico.TopicoRepository;
-import br.com.alura.forum_hub.domain.topico.TopicoStatus;
+import br.com.alura.forum_hub.domain.topico.*;
 import br.com.alura.forum_hub.domain.usuario.Usuario;
 import br.com.alura.forum_hub.domain.usuario.UsuarioRepository;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.time.LocalDateTime;
 
@@ -33,10 +33,51 @@ public class TopicoController {
         this.cursoRepository = cursoRepository;
     }
 
-    @PostMapping
-    public void cadastrar(@RequestBody DadosCadastroTopico dados) {
+    @GetMapping("/{id}")
+    public ResponseEntity detalhar(@PathVariable Long id) {
+
+        var optionalTopico = topicoRepository.findById(id);
+
+        if(optionalTopico.isEmpty()){
+            return ResponseEntity.notFound().build();
+        }
+
+        var topico = optionalTopico.get();
+
+        return ResponseEntity.ok(new DadosDetalhamentoTopico(topico));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity atualizar(
+            @PathVariable Long id,
+            @RequestBody @Valid DadosAtualizacaoTopico dados) {
+
+        var optionalTopico = topicoRepository.findById(id);
+
+        if(optionalTopico.isEmpty()){
+            return ResponseEntity.notFound().build();
+        }
+
+        var topico = optionalTopico.get();
 
         if(topicoRepository.existsByTituloAndMensagem(dados.titulo(), dados.mensagem())){
+            throw new RuntimeException("Tópico duplicado");
+        }
+
+        topico.setTitulo(dados.titulo());
+        topico.setMensagem(dados.mensagem());
+
+        topicoRepository.save(topico);
+
+        return ResponseEntity.ok(new DadosDetalhamentoTopico(topico));
+    }
+
+    @PostMapping
+    public ResponseEntity cadastrar(
+            @RequestBody @Valid DadosCadastroTopico dados,
+            UriComponentsBuilder uriBuilder) {
+
+        if (topicoRepository.existsByTituloAndMensagem(dados.titulo(), dados.mensagem())) {
             throw new RuntimeException("Tópico duplicado");
         }
 
@@ -58,5 +99,29 @@ public class TopicoController {
 
         topicoRepository.save(topico);
 
+        var uri = uriBuilder.path("/topicos/{id}")
+                .buildAndExpand(topico.getId())
+                .toUri();
+
+        return ResponseEntity.created(uri)
+                .body(new DadosDetalhamentoTopico(topico));
+    }
+
+    @GetMapping
+    public Page<DadosListagemTopico> listar(
+            @PageableDefault(size = 10, sort = {"dataCriacao"}) Pageable paginacao) {
+        return topicoRepository.findAll(paginacao).map(DadosListagemTopico::new);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity deletar(@PathVariable Long id){
+
+        if(!topicoRepository.existsById(id)){
+            return ResponseEntity.notFound().build();
+        }
+
+        topicoRepository.deleteById(id);
+
+        return ResponseEntity.noContent().build();
     }
 }

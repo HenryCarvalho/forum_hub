@@ -44,4 +44,40 @@ public class Topico {
         this.autor = autor;
         this.curso = curso;
     }
+
+    public void setTitulo(String titulo) {
+        this.titulo = titulo;
+    }
+
+    public void setMensagem(String mensagem) {
+        this.mensagem = mensagem;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public String getTitulo() {
+        return titulo;
+    }
+
+    public String getMensagem() {
+        return mensagem;
+    }
+
+    public LocalDateTime getDataCriacao() {
+        return dataCriacao;
+    }
+
+    public TopicoStatus getStatus() {
+        return status;
+    }
+
+    public Usuario getAutor() {
+        return autor;
+    }
+
+    public Curso getCurso() {
+        return curso;
+    }
 }
